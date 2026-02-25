@@ -28,6 +28,12 @@ export function DialogRawContext(props: { sessionID: string }) {
 
   const [context] = createResource(async () => {
     const result = await sdk.client.session.context({ sessionID: props.sessionID })
+    if (result.error) {
+      const errMsg = typeof result.error === "string" 
+        ? result.error 
+        : result.error.message || JSON.stringify(result.error)
+      throw new Error(errMsg || "Failed to fetch context")
+    }
     return result.data
   })
 

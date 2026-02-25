@@ -488,8 +488,13 @@ export const SessionRoutes = lazy(() =>
       ),
       async (c) => {
         const sessionID = c.req.valid("param").sessionID
-        const result = await SessionContext.build(sessionID)
-        return c.json(result)
+        try {
+          const result = await SessionContext.build(sessionID)
+          return c.json(result)
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e)
+          return c.json({ error: message }, 500)
+        }
       },
     )
     .delete(

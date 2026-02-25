@@ -20,6 +20,9 @@ export namespace SessionContext {
 
   export async function build(sessionID: string): Promise<RawContext> {
     const session = await Session.get(sessionID)
+    if (!session) {
+      throw new Error(`Session not found: ${sessionID}`)
+    }
     const msgs = await Session.messages({ sessionID })
 
     // Find the last user message to get agent and model info
@@ -36,7 +39,13 @@ export namespace SessionContext {
     }
 
     const agent = await Agent.get(agentName)
+    if (!agent) {
+      throw new Error(`Agent not found: ${agentName}`)
+    }
     const modelInfo = await Provider.getModel(model.providerID, model.modelID)
+    if (!modelInfo) {
+      throw new Error(`Model not found: ${model.providerID}/${model.modelID}`)
+    }
 
     // Build system prompts
     const system: string[] = []
