@@ -938,6 +938,95 @@ export default function Page() {
     // Don't autofocus chat if terminal panel is open
     if (view().terminal.opened()) return
 
+    // Navigation keyboard shortcuts
+    if (event.ctrlKey || event.metaKey) {
+      const conversationContainer = document.querySelector("[data-conversation-container]")
+
+      if (event.key === "Home" || (event.shiftKey && event.key === "ArrowUp")) {
+        // Ctrl+Home or Ctrl+Shift+Up: Go to top
+        event.preventDefault()
+        conversationContainer?.scrollTo({ top: 0, behavior: "smooth" })
+        return
+      }
+
+      if (event.key === "End" || (event.shiftKey && event.key === "ArrowDown")) {
+        // Ctrl+End or Ctrl+Shift+Down: Go to bottom
+        event.preventDefault()
+        conversationContainer?.scrollTo({
+          top: conversationContainer.scrollHeight,
+          behavior: "smooth",
+        })
+        return
+      }
+
+      if (event.key === "ArrowUp" && !event.shiftKey) {
+        // Ctrl+Up: Previous user message - Performance optimized
+        event.preventDefault()
+        const conversationContainer = document.querySelector("[data-conversation-container]")
+        if (!conversationContainer) return
+
+        // Use requestAnimationFrame for better performance
+        requestAnimationFrame(() => {
+          const userMessages = Array.from(document.querySelectorAll('[data-message-role="user"]'))
+          if (userMessages.length === 0) return
+
+          const scrollTop = conversationContainer.scrollTop
+
+          // Find the first user message above current viewport with better performance
+          let previousMessage = null
+          for (let i = userMessages.length - 1; i >= 0; i--) {
+            const msgTop = userMessages[i].getBoundingClientRect().top + conversationContainer.scrollTop
+            if (msgTop < scrollTop - 50) {
+              previousMessage = userMessages[i]
+              break
+            }
+          }
+
+          if (previousMessage) {
+            previousMessage.scrollIntoView({ behavior: "smooth", block: "start" })
+          } else {
+            conversationContainer.scrollTo({ top: 0, behavior: "smooth" })
+          }
+        })
+        return
+      }
+
+      if (event.key === "ArrowDown" && !event.shiftKey) {
+        // Ctrl+Down: Next user message - Performance optimized
+        event.preventDefault()
+        const conversationContainer = document.querySelector("[data-conversation-container]")
+        if (!conversationContainer) return
+
+        // Use requestAnimationFrame for better performance
+        requestAnimationFrame(() => {
+          const userMessages = Array.from(document.querySelectorAll('[data-message-role="user"]'))
+          if (userMessages.length === 0) return
+
+          const scrollTop = conversationContainer.scrollTop
+
+          // Find the first user message below current viewport with better performance
+          let nextMessage = null
+          for (let i = 0; i < userMessages.length; i++) {
+            const msgTop = userMessages[i].getBoundingClientRect().top + conversationContainer.scrollTop
+            if (msgTop > scrollTop + 100) {
+              nextMessage = userMessages[i]
+              break
+            }
+          }
+
+          if (nextMessage) {
+            nextMessage.scrollIntoView({ behavior: "smooth", block: "start" })
+          } else {
+            conversationContainer.scrollTo({
+              top: conversationContainer.scrollHeight,
+              behavior: "smooth",
+            })
+          }
+        })
+        return
+      }
+    }
+
     // Only treat explicit scroll keys as potential "user scroll" gestures.
     if (event.key === "PageUp" || event.key === "PageDown" || event.key === "Home" || event.key === "End") {
       markScrollGesture()
@@ -1548,6 +1637,61 @@ export default function Page() {
                           <Icon name="arrow-down-to-line" />
                         </button>
                       </div>
+                      {/* Floating navigation buttons */}
+                      <div
+                        data-e2e="nav-buttons-overlay"
+                        class="absolute right-3 bottom-[calc(var(--prompt-height,8rem)+32px)] z-[60] flex flex-col gap-1"
+                      >
+                        <IconButton
+                          data-e2e="nav-toggle-sidebar"
+                          icon="layout-left"
+                          variant="ghost"
+                          onClick={() => {
+                            if (window.innerWidth < 1280) layout.mobileSidebar.toggle()
+                            else layout.sidebar.toggle()
+                          }}
+                          aria-label="Toggle sidebar"
+                          class="bg-background-base/90 backdrop-blur-sm border border-border-weak-base hover:bg-background-stronger mb-1"
+                        />
+                        <IconButton
+                          data-e2e="nav-scroll-top"
+                          icon="chevrons-up"
+                          variant="ghost"
+                          onClick={() => {
+                            if (!scroller) return
+                            scroller.scrollTo({ top: 0, behavior: "smooth" })
+                          }}
+                          aria-label="Go to top of conversation"
+                          class="bg-background-base/90 backdrop-blur-sm border border-border-weak-base hover:bg-background-stronger"
+                        />
+                        <IconButton
+                          data-e2e="nav-prev-message"
+                          icon="chevron-up"
+                          variant="ghost"
+                          onClick={() => navigateMessageByOffset(-1)}
+                          aria-label="Previous user message"
+                          class="bg-background-base/90 backdrop-blur-sm border border-border-weak-base hover:bg-background-stronger"
+                        />
+                        <IconButton
+                          data-e2e="nav-next-message"
+                          icon="chevron-down"
+                          variant="ghost"
+                          onClick={() => navigateMessageByOffset(1)}
+                          aria-label="Next user message"
+                          class="bg-background-base/90 backdrop-blur-sm border border-border-weak-base hover:bg-background-stronger"
+                        />
+                        <IconButton
+                          data-e2e="nav-scroll-bottom"
+                          icon="chevrons-down"
+                          variant="ghost"
+                          onClick={() => {
+                            setStore("messageId", undefined)
+                            autoScroll.forceScrollToBottom()
+                          }}
+                          aria-label="Go to bottom of conversation"
+                          class="bg-background-base/90 backdrop-blur-sm border border-border-weak-base hover:bg-background-stronger"
+                        />
+                      </div>
                       <div
                         ref={setScrollRef}
                         data-session-scroll
@@ -1687,80 +1831,6 @@ export default function Page() {
               </Match>
             </Switch>
           </div>
-
-          {/* Navigation buttons */}
-          <Show when={params.id && visibleUserMessages().length > 0}>
-            <div
-              data-e2e="nav-buttons"
-              class="fixed md:absolute right-4 md:right-6 bottom-32 md:bottom-36 z-50 flex flex-col gap-1 pointer-events-auto"
-              style={{ bottom: isDesktop() ? undefined : `calc(8rem + ${keyboardOffset()}px)` }}
-            >
-              <Tooltip value="Open sidebar" placement="left">
-                <IconButton
-                  data-e2e="nav-sidebar"
-                  icon="menu"
-                  variant="ghost"
-                  class="xl:hidden"
-                  onClick={() => layout.mobileSidebar.toggle()}
-                />
-              </Tooltip>
-              <Tooltip value={language.t("session.tab.rawcontext")} placement="left">
-                <IconButton
-                  data-e2e="nav-rawcontext"
-                  icon="code"
-                  variant="ghost"
-                  class="md:hidden"
-                  onClick={() =>
-                    dialog.show(() => (
-                      <Dialog title={language.t("session.tab.rawcontext")} size="x-large" class="h-[80vh]">
-                        <SessionRawContextTab view={view} />
-                      </Dialog>
-                    ))
-                  }
-                />
-              </Tooltip>
-              <Tooltip value="Go to top" placement="left">
-                <IconButton
-                  data-e2e="nav-top"
-                  icon="chevron-grabber-vertical"
-                  variant="ghost"
-                  class="rotate-180"
-                  onClick={() => {
-                    const container = document.querySelector("[data-session-scroll]")
-                    container?.scrollTo({ top: 0, behavior: "smooth" })
-                  }}
-                />
-              </Tooltip>
-              <Tooltip value="Previous message" placement="left">
-                <IconButton
-                  data-e2e="nav-prev-msg"
-                  icon="chevron-down"
-                  variant="ghost"
-                  class="rotate-180"
-                  onClick={() => navigateMessageByOffset(-1)}
-                />
-              </Tooltip>
-              <Tooltip value="Next message" placement="left">
-                <IconButton
-                  data-e2e="nav-next-msg"
-                  icon="chevron-down"
-                  variant="ghost"
-                  onClick={() => navigateMessageByOffset(1)}
-                />
-              </Tooltip>
-              <Tooltip value="Go to bottom" placement="left">
-                <IconButton
-                  data-e2e="nav-bottom"
-                  icon="chevron-grabber-vertical"
-                  variant="ghost"
-                  onClick={() => {
-                    const container = document.querySelector("[data-session-scroll]")
-                    if (container) container.scrollTo({ top: container.scrollHeight, behavior: "smooth" })
-                  }}
-                />
-              </Tooltip>
-            </div>
-          </Show>
 
           {/* Prompt input */}
           <div
