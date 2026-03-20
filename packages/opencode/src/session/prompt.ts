@@ -308,7 +308,15 @@ export namespace SessionPrompt {
         // If so, the model should be prompted to execute the steps it described
         const lastUserMsg = msgs.find((m) => m.info.id === lastUser.id)
         const wasSyntheticContinue = lastUserMsg?.parts.every((p) => p.type === "text" && p.synthetic)
-        const wasAfterCompaction = lastFinished?.summary === true
+        // Look for a compaction summary message before the synthetic user message
+        // This correctly identifies post-compaction state even after subsequent assistant responses
+        const wasAfterCompaction = wasSyntheticContinue
+          ? msgs.some((m) => {
+              if (m.info.role !== "assistant") return false
+              const assistant = m.info as MessageV2.Assistant
+              return assistant.summary === true && assistant.id < lastUser.id
+            })
+          : false
 
         const stopOutput = {
           stop: true,
@@ -317,11 +325,34 @@ export namespace SessionPrompt {
         }
 
         // If this was a synthetic continue after compaction and model didn't use tools,
-        // don't stop - prompt it to actually execute
+        // don't stop - prompt it to actually execute. But only re-prompt once to avoid
+        // infinite loops when the model has nothing left to do.
         if (wasSyntheticContinue && wasAfterCompaction) {
-          stopOutput.stop = false
-          stopOutput.prompt =
-            "You described the next steps but didn't execute them. Please proceed with the actions now using the appropriate tools."
+          const usedTools = lastAssistantMsg?.parts.some((p) => p.type === "tool")
+          if (!usedTools) {
+            // Count synthetic user messages after the compaction summary to determine
+            // if we've already re-prompted. The first synthetic message is the
+            // "Continue working..." from compaction.ts. If there's already a second
+            // one (our re-prompt), don't inject another — let the loop stop.
+            const summaryID = msgs.findLast((m) => {
+              if (m.info.role !== "assistant") return false
+              const assistant = m.info as MessageV2.Assistant
+              return assistant.summary === true && assistant.id < lastUser.id
+            })?.info.id
+            const syntheticContinues = summaryID
+              ? msgs.filter(
+                  (m) =>
+                    m.info.role === "user" &&
+                    m.info.id > summaryID &&
+                    m.parts.every((p) => p.type === "text" && p.synthetic),
+                ).length
+              : 0
+            if (syntheticContinues <= 1) {
+              stopOutput.stop = false
+              stopOutput.prompt =
+                "You described the next steps but didn't execute them. Please proceed with the actions now using the appropriate tools."
+            }
+          }
         }
 
         await Plugin.trigger(

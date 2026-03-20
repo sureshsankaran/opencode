@@ -259,6 +259,7 @@ export namespace Ripgrep {
       if (buffer) yield buffer
     } finally {
       reader.releaseLock()
+      proc.kill()
       await proc.exited
     }
   }
