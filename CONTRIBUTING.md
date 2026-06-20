@@ -34,6 +34,31 @@ Want to take on an issue? Leave a comment and a maintainer may assign it to you 
   bun dev
   ```
 
+### Development Server (macOS)
+
+For persistent development on macOS, use launchctl to manage the OpenCode server:
+
+```bash
+# Start server on port 5050 (binds to all interfaces for external access)
+launchctl load ~/Library/LaunchAgents/com.opencode.server.plist
+
+# Stop server
+launchctl unload ~/Library/LaunchAgents/com.opencode.server.plist
+
+# Check status and view logs
+launchctl list | grep opencode
+tail -f /tmp/opencode-server.log
+```
+
+Benefits of using launchctl:
+
+- Automatic port cleanup (prevents conflicts)
+- External network access (binds to 0.0.0.0)
+- Auto-restart on crashes
+- Persistent background operation
+
+The server will be accessible at `http://localhost:5050` locally and `http://<your-ip>:5050` externally.
+
 ### Running against a different directory
 
 By default, `bun dev` runs OpenCode in the `packages/opencode` directory. To run it against a different directory or repository:

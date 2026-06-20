@@ -612,7 +612,6 @@ export default function Layout(props: ParentProps) {
         if (!expanded && !active) continue
         const [dirStore] = globalSync.child(dir, { bootstrap: true })
         const dirSessions = dirStore.session
-          .filter((session) => session.directory === dirStore.path.directory)
           .filter((session) => !session.parentID && !session.time?.archived)
           .toSorted(sortSessions)
         result.push(...dirSessions)
@@ -620,10 +619,7 @@ export default function Layout(props: ParentProps) {
       return result
     }
     const [projectStore] = globalSync.child(project.worktree)
-    return projectStore.session
-      .filter((session) => session.directory === projectStore.path.directory)
-      .filter((session) => !session.parentID && !session.time?.archived)
-      .toSorted(sortSessions)
+    return projectStore.session.filter((session) => !session.parentID && !session.time?.archived).toSorted(sortSessions)
   })
 
   type PrefetchQueue = {
@@ -931,6 +927,12 @@ export default function Layout(props: ParentProps) {
         category: language.t("command.category.settings"),
         keybind: "mod+comma",
         onSelect: () => openSettings(),
+      },
+      {
+        id: "tasks.open",
+        title: "Scheduled Tasks",
+        category: language.t("command.category.view"),
+        onSelect: () => navigate("/tasks"),
       },
       {
         id: "session.previous",
@@ -1854,10 +1856,7 @@ export default function Layout(props: ParentProps) {
     const [pendingRename, setPendingRename] = createSignal(false)
     const slug = createMemo(() => base64Encode(props.directory))
     const sessions = createMemo(() =>
-      workspaceStore.session
-        .filter((session) => session.directory === workspaceStore.path.directory)
-        .filter((session) => !session.parentID && !session.time?.archived)
-        .toSorted(sortSessions),
+      workspaceStore.session.filter((session) => !session.parentID && !session.time?.archived).toSorted(sortSessions),
     )
     const local = createMemo(() => props.directory === props.project.worktree)
     const active = createMemo(() => {
@@ -2070,7 +2069,6 @@ export default function Layout(props: ParentProps) {
     const sessions = (directory: string) => {
       const [data] = globalSync.child(directory)
       return data.session
-        .filter((session) => session.directory === data.path.directory)
         .filter((session) => !session.parentID && !session.time?.archived)
         .toSorted(sortSessions)
         .slice(0, 2)
@@ -2079,7 +2077,6 @@ export default function Layout(props: ParentProps) {
     const projectSessions = () => {
       const [data] = globalSync.child(props.project.worktree)
       return data.session
-        .filter((session) => session.directory === data.path.directory)
         .filter((session) => !session.parentID && !session.time?.archived)
         .toSorted(sortSessions)
         .slice(0, 2)
@@ -2205,10 +2202,7 @@ export default function Layout(props: ParentProps) {
     const [workspaceStore, setWorkspaceStore] = globalSync.child(props.project.worktree)
     const slug = createMemo(() => base64Encode(props.project.worktree))
     const sessions = createMemo(() =>
-      workspaceStore.session
-        .filter((session) => session.directory === workspaceStore.path.directory)
-        .filter((session) => !session.parentID && !session.time?.archived)
-        .toSorted(sortSessions),
+      workspaceStore.session.filter((session) => !session.parentID && !session.time?.archived).toSorted(sortSessions),
     )
     const loading = createMemo(() => workspaceStore.status !== "complete" && sessions().length === 0)
     const hasMore = createMemo(() => workspaceStore.sessionTotal > workspaceStore.session.length)
@@ -2367,6 +2361,18 @@ export default function Layout(props: ParentProps) {
             </DragDropProvider>
           </div>
           <div class="shrink-0 w-full pt-3 pb-3 flex flex-col items-center gap-2">
+            <Tooltip placement={sidebarProps.mobile ? "bottom" : "right"} value="Scheduled Tasks">
+              <IconButton
+                icon="task"
+                variant="ghost"
+                size="large"
+                onClick={() => {
+                  navigate("/tasks")
+                  layout.mobileSidebar.hide()
+                }}
+                aria-label="Scheduled Tasks"
+              />
+            </Tooltip>
             <TooltipKeybind
               placement={sidebarProps.mobile ? "bottom" : "right"}
               title={language.t("sidebar.settings")}

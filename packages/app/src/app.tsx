@@ -23,6 +23,7 @@ import { CommentsProvider } from "@/context/comments"
 import { NotificationProvider } from "@/context/notification"
 import { DialogProvider } from "@opencode-ai/ui/context/dialog"
 import { CommandProvider } from "@/context/command"
+import { TaskSchedulerProvider } from "@/context/task-scheduler"
 import { LanguageProvider, useLanguage } from "@/context/language"
 import { usePlatform } from "@/context/platform"
 import { Logo } from "@opencode-ai/ui/logo"
@@ -34,6 +35,7 @@ import { Suspense } from "solid-js"
 
 const Home = lazy(() => import("@/pages/home"))
 const Session = lazy(() => import("@/pages/session"))
+const Tasks = lazy(() => import("@/pages/tasks"))
 const Loading = () => <div class="size-full" />
 
 function UiI18nBridge(props: ParentProps) {
@@ -115,8 +117,13 @@ export function AppInterface(props: { defaultUrl?: string }) {
     if (persisted) return persisted
 
     if (location.hostname.includes("opencode.ai")) return "http://localhost:4096"
-    if (import.meta.env.DEV)
+    if (import.meta.env.DEV) {
+      // When accessed from a non-localhost host (e.g. mobile via Tailscale),
+      // use the current origin so Vite's proxy handles API calls
+      const host = location.hostname
+      if (host !== "localhost" && host !== "127.0.0.1" && host !== "0.0.0.0") return window.location.origin
       return `http://${import.meta.env.VITE_OPENCODE_SERVER_HOST ?? "localhost"}:${import.meta.env.VITE_OPENCODE_SERVER_PORT ?? "4096"}`
+    }
 
     return window.location.origin
   }
@@ -133,7 +140,9 @@ export function AppInterface(props: { defaultUrl?: string }) {
                     <LayoutProvider>
                       <NotificationProvider>
                         <CommandProvider>
-                          <Layout>{props.children}</Layout>
+                          <TaskSchedulerProvider>
+                            <Layout>{props.children}</Layout>
+                          </TaskSchedulerProvider>
                         </CommandProvider>
                       </NotificationProvider>
                     </LayoutProvider>
@@ -146,6 +155,14 @@ export function AppInterface(props: { defaultUrl?: string }) {
                 component={() => (
                   <Suspense fallback={<Loading />}>
                     <Home />
+                  </Suspense>
+                )}
+              />
+              <Route
+                path="/tasks"
+                component={() => (
+                  <Suspense fallback={<Loading />}>
+                    <Tasks />
                   </Suspense>
                 )}
               />

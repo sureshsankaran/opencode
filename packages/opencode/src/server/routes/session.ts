@@ -3,6 +3,7 @@ import { stream } from "hono/streaming"
 import { describeRoute, validator, resolver } from "hono-openapi"
 import z from "zod"
 import { Session } from "../../session"
+import { SessionCache } from "../../session/cache"
 import { MessageV2 } from "../../session/message-v2"
 import { SessionPrompt } from "../../session/prompt"
 import { SessionCompaction } from "../../session/compaction"
@@ -57,10 +58,16 @@ export const SessionRoutes = lazy(() =>
         }),
       ),
       async (c) => {
+        const startTime = Date.now()
         const query = c.req.valid("query")
         const term = query.search?.toLowerCase()
+
+        // Use cache for improved performance
+        const cachedSessions = await SessionCache.getSessionList(query.projectID)
         const sessions: Session.Info[] = []
-        for await (const session of Session.list()) {
+
+        // Apply filters efficiently on cached data
+        for (const session of cachedSessions) {
           if (query.projectID !== undefined && session.projectID !== query.projectID) continue
           // Keep directory filter for backwards compatibility, but prefer projectID
           if (query.projectID === undefined && query.directory !== undefined && session.directory !== query.directory)
@@ -71,7 +78,97 @@ export const SessionRoutes = lazy(() =>
           sessions.push(session)
           if (query.limit !== undefined && sessions.length >= query.limit) break
         }
+
+        const loadTime = Date.now() - startTime
+        log.info("session list", {
+          count: sessions.length,
+          totalCached: cachedSessions.length,
+          loadTimeMs: loadTime,
+          projectID: query.projectID,
+        })
+
         return c.json(sessions)
+      },
+    )
+    .get(
+      "/cache/stats",
+      describeRoute({
+        summary: "Get cache statistics",
+        description: "Get statistics about the session cache performance",
+        operationId: "session.cache.stats",
+        responses: {
+          200: {
+            description: "Cache statistics",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    entries: z.number(),
+                    projects: z.string().array(),
+                    totalSessions: z.number(),
+                  }),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        const stats = SessionCache.getCacheStats()
+        return c.json(stats)
+      },
+    )
+    .post(
+      "/cache/warm",
+      describeRoute({
+        summary: "Warm session cache",
+        description: "Pre-load sessions into cache for improved performance",
+        operationId: "session.cache.warm",
+        responses: {
+          200: {
+            description: "Cache warmed successfully",
+            content: {
+              "application/json": {
+                schema: resolver(z.boolean()),
+              },
+            },
+          },
+        },
+      }),
+      validator(
+        "json",
+        z
+          .object({
+            projectID: z.string().optional(),
+          })
+          .optional(),
+      ),
+      async (c) => {
+        const body = c.req.valid("json") ?? {}
+        await SessionCache.warmCache(body.projectID)
+        return c.json(true)
+      },
+    )
+    .delete(
+      "/cache",
+      describeRoute({
+        summary: "Clear session cache",
+        description: "Clear all cached session data",
+        operationId: "session.cache.clear",
+        responses: {
+          200: {
+            description: "Cache cleared successfully",
+            content: {
+              "application/json": {
+                schema: resolver(z.boolean()),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        SessionCache.clearCache()
+        return c.json(true)
       },
     )
     .get(
@@ -212,6 +309,8 @@ export const SessionRoutes = lazy(() =>
       async (c) => {
         const body = c.req.valid("json") ?? {}
         const session = await Session.create(body)
+        // Invalidate cache when new session is created
+        SessionCache.invalidateProject(session.projectID)
         return c.json(session)
       },
     )
@@ -241,7 +340,10 @@ export const SessionRoutes = lazy(() =>
       ),
       async (c) => {
         const sessionID = c.req.valid("param").sessionID
+        const session = await Session.get(sessionID)
         await Session.remove(sessionID)
+        // Invalidate cache when session is deleted
+        SessionCache.invalidateProject(session.projectID)
         return c.json(true)
       },
     )
@@ -294,6 +396,9 @@ export const SessionRoutes = lazy(() =>
           },
           { touch: false },
         )
+
+        // Invalidate cache when session is updated
+        SessionCache.invalidateProject(updatedSession.projectID)
 
         return c.json(updatedSession)
       },

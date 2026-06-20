@@ -94,6 +94,73 @@ For more info on how to configure OpenCode [**head over to our docs**](https://o
 
 If you're interested in contributing to OpenCode, please read our [contributing docs](./CONTRIBUTING.md) before submitting a pull request.
 
+### Development
+
+#### Development Server (launchctl - macOS)
+
+For development on macOS, use launchctl to manage the OpenCode server. This ensures the server runs reliably in the background and binds to all network interfaces for external access.
+
+**Start the server:**
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.opencode.server.plist
+```
+
+**Stop the server:**
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.opencode.server.plist
+```
+
+**Check server status:**
+
+```bash
+launchctl list | grep opencode
+```
+
+**View server logs:**
+
+```bash
+tail -f /tmp/opencode-server.log    # stdout
+tail -f /tmp/opencode-server.err    # stderr
+```
+
+The launchctl service:
+
+- Runs OpenCode server on port 5050
+- Binds to all interfaces (`0.0.0.0`) for external access
+- Automatically cleans up conflicting processes on the same port
+- Restarts automatically if the service crashes
+- Accessible at:
+  - Local: `http://localhost:5050`
+  - Network: `http://<your-ip>:5050`
+  - Tailscale: `http://<tailscale-ip>:5050`
+
+**Alternative development methods:**
+
+For quick local development, you can also use:
+
+```bash
+bun dev                    # Start TUI in current directory
+bun dev serve             # Start headless API server (port 4096)
+bun dev web               # Start server + open web interface
+```
+
+> [!NOTE]  
+> The launchctl setup is recommended for persistent development work as it provides better reliability and external access capabilities.
+
+#### Development Setup
+
+- Requirements: Bun 1.3+
+- Install dependencies and start the dev server from the repo root:
+
+  ```bash
+  bun install
+  bun dev
+  ```
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed development instructions.
+
 ### Building on OpenCode
 
 If you are working on a project that's related to OpenCode and is using "opencode" as a part of its name; for example, "opencode-dashboard" or "opencode-mobile", please add a note to your README to clarify that it is not built by the OpenCode team and is not affiliated with us in any way.

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.opencode.task-scheduler</string>
+
+    <key>Comment</key>
+    <string>opencode task-scheduler daemon - fires scheduled prompts into the running opencode server 24/7</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__BUN__</string>
+        <string>run</string>
+        <string>__DAEMON__</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__PACKAGE_DIR__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>__HOME__</string>
+        <key>PATH</key>
+        <string>__BUN_DIR__:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <!-- The opencode server the daemon dispatches prompts to. -->
+        <key>OPENCODE_SERVER_URL</key>
+        <string>http://localhost:5050</string>
+        <!-- Control API the web UI connects to. -->
+        <key>TASK_SCHEDULER_PORT</key>
+        <string>5055</string>
+        <!-- Canonical task store, shared with any tooling. -->
+        <key>OPENCODE_TASKS_FILE</key>
+        <string>__HOME__/.config/opencode/tasks.json</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>__HOME__/.local/share/opencode/log/task-scheduler.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__HOME__/.local/share/opencode/log/task-scheduler.log</string>
+
+    <!-- Start on login -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- KeepAlive: always restart regardless of exit code -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Wait 15 seconds between restart attempts -->
+    <key>ThrottleInterval</key>
+    <integer>15</integer>
+</dict>
+</plist>

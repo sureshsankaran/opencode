@@ -315,9 +315,9 @@ export namespace Session {
     },
   )
 
-  export async function* list() {
-    const project = Instance.project
-    for (const item of await Storage.list(["session", project.id])) {
+  export async function* list(projectID?: string) {
+    const id = projectID ?? Instance.project.id
+    for (const item of await Storage.list(["session", id])) {
       yield Storage.read<Info>(item)
     }
   }

@@ -72,6 +72,9 @@ const icons = {
   keyboard: `<path d="M5.125 7.375V4.375H14.875V2.875M8.3125 13.9375H11.6875M8.125 13.9375H11.875M2.125 7.375H17.875V17.125H2.125V7.375ZM5.5 10.375H5.125V10.75H5.5V10.375ZM8.5 10.375H8.125V10.75H8.5V10.375ZM11.875 10.375H11.5V10.75H11.875V10.375ZM14.875 10.375H14.5V10.75H14.875V10.375ZM14.875 13.75H14.5V14.125H14.875V13.75ZM5.5 13.75H5.125V14.125H5.5V13.75Z" stroke="currentColor" stroke-linecap="square"/>`,
   selector: `<path d="M6.66626 12.5033L9.99959 15.8366L13.3329 12.5033M6.66626 7.50326L9.99959 4.16992L13.3329 7.50326" stroke="currentColor" stroke-linecap="square"/>`,
   "arrow-down-to-line": `<path d="M15.2083 11.6667L10 16.875L4.79167 11.6667M10 16.25V3.125" stroke="currentColor" stroke-width="1.25" stroke-linecap="square"/>`,
+  "chevrons-up": `<path d="M13.3332 11.6667L9.99984 8.33337L6.6665 11.6667M13.3332 7.50004L9.99984 4.16671L6.6665 7.50004" stroke="currentColor" stroke-linecap="square"/>`,
+  "chevrons-down": `<path d="M6.6665 8.33337L9.99984 11.6667L13.3332 8.33337M6.6665 12.5L9.99984 15.8334L13.3332 12.5" stroke="currentColor" stroke-linecap="square"/>`,
+  "chevron-up": `<path d="M13.3332 11.6667L9.99984 8.33337L6.6665 11.6667" stroke="currentColor" stroke-linecap="square"/>`,
 }
 
 export interface IconProps extends ComponentProps<"svg"> {

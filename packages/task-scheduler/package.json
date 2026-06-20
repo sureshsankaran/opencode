@@ -1,0 +1,19 @@
+{
+  "name": "@opencode-ai/task-scheduler",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "opencode-task-scheduler": "./src/daemon.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/daemon.ts",
+    "start": "bun run src/daemon.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "catalog:",
+    "bun-types": "latest",
+    "typescript": "catalog:"
+  }
+}
